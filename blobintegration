@@ -1,0 +1,57 @@
+create or replace storage integration blob_int
+type = external_stage
+storage_provider = 'azure'
+enabled = true
+azure_tenant_id ='43161350-3da9-471f-9132-8dec6f8cf400'
+storage_allowed_locations = ('azure://snowflakedemor.blob.core.windows.net/integration/event/');
+
+
+
+desc integration blob_int;
+
+CREATE OR REPLACE STAGE my_blob_stage
+STORAGE_INTEGRATION= blob_int
+URL='azure://snowflakedemor.blob.core.windows.net/integration/event/'
+file_format = my_file_format;
+DESC STAGE my_blob_stage;
+List @my_blob_stage;
+
+
+create or replace table event(
+event variant
+);
+create or replace file format my_file_format
+type = json;
+create or replace pipe azure_pipe
+auto_ingest = true 
+INTEGRATION = 'AZURE_NOTIFICATION_INT'
+as
+copy into event
+from @my_blob_stage
+file_format = (format_name = my_file_format);
+
+
+
+DESC NOTIFICATION INTEGRATION AZURE_NOTIFICATION_INT;
+show pipes
+
+
+CREATE OR REPLACE NOTIFICATION INTEGRATION azure_notification_int
+TYPE = QUEUE
+NOTIFICATION_PROVIDER = AZURE_STORAGE_QUEUE
+ENABLED = TRUE
+AZURE_TENANT_ID = '43161350-3da9-471f-9132-8dec6f8cf400'
+AZURE_STORAGE_QUEUE_PRIMARY_URI =
+'https://snowflakedemor.queue.core.windows.net/queue';
+
+select system$pipe_status('azure_pipe');
+select * from event
+
+select *  from table(information_schema.copy_history(table_name=>'event',start_time=>dateadd(hours,-1,current_timestamp())));
+alter pipe azure_pipe refresh;
+
+select metadata  $mock_data1,$1 from @my_blob_stage
+select $1 from @my_blob_stage;
+
+desc pipe azure_pipe
+SELECT SYSTEM$PIPE_STATUS('azure_pipe');
