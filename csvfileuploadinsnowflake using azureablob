@@ -1,0 +1,45 @@
+create or replace table demos(
+id int,
+name varchar(50)
+);
+create OR REPLACE TEMPORARY table demo(
+id int,
+name varchar(50)
+);
+SHOW TABLES
+alter table demo set data_retention_time_in_days = 1;
+
+create or replace storage integration blob_int
+type = external_stage
+storage_provider = 'azure'
+enabled = true
+azure_tenant_id ='43161350-3da9-471f-9132-8dec6f8cf400'
+storage_allowed_locations = ('azure://snownewstorage.blob.core.windows.net/snowflake-integration/');
+https://snowflakedemor.blob.core.windows.net/integration
+desc integration blob_int;
+
+CREATE OR REPLACE FILE FORMAT my_csv_format
+TYPE ='CSV'
+FIELD_DELIMITER=","
+RECORD_DELIMITER = '\n'
+SKIP_HEADER = 1;
+
+
+//Create a external s3 stage
+
+CREATE OR REPLACE STAGE my_blob_stage
+
+STORAGE_INTEGRATION= blob_int
+
+URL='azure://snownewstorage.blob.core.windows.net/snowflake-integration/'
+
+FILE_FORMAT= my_csv_format;
+
+List @my_blob_stage;
+
+DESC STAGE my_blob_stage;
+
+copy into demos
+from @my_blob_stage
+FILE_FORMAT= (format_name=my_csv_format);
+select * from demos
